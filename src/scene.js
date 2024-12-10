@@ -9,6 +9,7 @@ export class CarScene {
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.controls = null;
         this.car = null;
+        this.base = null;
         this.isReady = false;
         this.onReadyCallback = null;
     }
@@ -18,10 +19,11 @@ export class CarScene {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setClearColor(0x000000, 0);
+        this.renderer.physicallyCorrectLights = true;
         document.getElementById('car-container').appendChild(this.renderer.domElement);
 
         // Setup camera
-        this.camera.position.set(5, 3, 7);
+        this.camera.position.set(4, 3, 4);
         this.camera.lookAt(0, 0, 0);
 
         // Setup controls
@@ -29,98 +31,115 @@ export class CarScene {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.maxPolarAngle = Math.PI / 1.5;
-        this.controls.minDistance = 4;
+        this.controls.minDistance = 3;
         this.controls.maxDistance = 10;
 
         // Setup lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 5, 5);
-        this.scene.add(directionalLight);
+        // Add multiple directional lights for better illumination
+        const lights = [
+            { position: [5, 5, 5], intensity: 1 },
+            { position: [-5, 3, -5], intensity: 0.8 },
+            { position: [0, 5, 0], intensity: 0.5 },
+            { position: [0, -2, 5], intensity: 0.3 }
+        ];
 
-        // Create low poly car
-        this.createLowPolyCar();
+        lights.forEach(light => {
+            const directionalLight = new THREE.DirectionalLight(0xffffff, light.intensity);
+            directionalLight.position.set(...light.position);
+            this.scene.add(directionalLight);
+        });
+
+        // Create environment map for reflections
+        const cubeTextureLoader = new THREE.CubeTextureLoader();
+        const envMap = cubeTextureLoader.load([
+            'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
+            'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
+            'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
+            'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
+            'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
+            'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
+        ]);
+        this.scene.environment = envMap;
+
+        // Create rotating base
+        const baseGeometry = new THREE.CylinderGeometry(2, 2, 0.1, 32);
+        const baseMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x111111,
+            metalness: 0.9,
+            roughness: 0.5,
+            transparent: true,
+            opacity: 0,
+            envMapIntensity: 0.8
+        });
+        this.base = new THREE.Mesh(baseGeometry, baseMaterial);
+        this.base.position.y = -0.05;
+        this.scene.add(this.base);
+
+        this.createSimpleCar();
 
         this.isReady = true;
         if (this.onReadyCallback) this.onReadyCallback();
 
-        // Handle window resize
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
-
-        // Start animation loop
         this.animate();
     }
 
-    createLowPolyCar() {
-        // Create car group
+    createSimpleCar() {
         this.car = new THREE.Group();
 
-        // Car body - main body
-        const bodyGeometry = new THREE.BoxGeometry(3, 0.75, 1.5);
-        const bodyMaterial = new THREE.MeshPhongMaterial({
-            color: 0xff0000,
+        // Create metallic material
+        const bodyMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x2b2b2b,
+            metalness: 1,
+            roughness: 0.2,
             transparent: true,
             opacity: 0,
-            flatShading: true
+            envMapIntensity: 1.5
         });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        body.position.y = 0.5;
 
-        // Car body - cabin
-        const cabinGeometry = new THREE.BoxGeometry(1.5, 0.5, 1.3);
-        const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
-        cabin.position.set(-0.3, 1.1, 0);
-
-        // Hood slope
-        const hoodGeometry = new THREE.BoxGeometry(1, 0.3, 1.4);
-        const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
-        hood.position.set(0.9, 0.75, 0);
-        hood.rotation.z = -Math.PI * 0.08;
+        // Simple box for car body
+        const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 1);
+        const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        carBody.position.y = 0.5;
+        this.car.add(carBody);
 
         // Wheels
-        const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
-        const wheelMaterial = new THREE.MeshPhongMaterial({
-            color: 0x333333,
+        const wheelGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
+        const wheelMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x111111,
+            metalness: 1,
+            roughness: 0.3,
             transparent: true,
-            opacity: 0,
-            flatShading: true
+            opacity: 0
         });
 
         const wheelPositions = [
-            { x: -0.9, z: 0.8 },  // front left
-            { x: -0.9, z: -0.8 }, // front right
-            { x: 0.9, z: 0.8 },   // back left
-            { x: 0.9, z: -0.8 }   // back right
+            { x: -0.7, z: 0.4 },   // front left
+            { x: 0.7, z: 0.4 },    // front right
+            { x: -0.7, z: -0.4 },  // rear left
+            { x: 0.7, z: -0.4 }    // rear right
         ];
 
         wheelPositions.forEach(pos => {
             const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel.position.set(pos.x, 0.3, pos.z);
+            wheel.position.set(pos.x, 0.2, pos.z);
             wheel.rotation.x = Math.PI / 2;
             this.car.add(wheel);
         });
 
-        // Add all parts to car
-        this.car.add(body);
-        this.car.add(cabin);
-        this.car.add(hood);
-
-        // Add car to scene
-        this.car.rotation.y = Math.PI / 4;
-        this.scene.add(this.car);
-    }
-
-    onReady(callback) {
-        this.onReadyCallback = callback;
-        if (this.isReady) callback();
+        // Position the car on the base
+        this.car.position.y = 0.1;
+        this.base.add(this.car); // Add car to base instead of scene for rotation
     }
 
     fadeIn() {
         if (!this.car) return;
         
-        this.car.traverse((child) => {
+        // Fade in all meshes
+        this.scene.traverse((child) => {
             if (child.isMesh) {
                 gsap.to(child.material, {
                     opacity: 1,
@@ -130,13 +149,18 @@ export class CarScene {
             }
         });
 
-        // Add a slow rotation animation
-        gsap.to(this.car.rotation, {
-            y: this.car.rotation.y + Math.PI * 2,
-            duration: 20,
+        // Add a slow rotation animation to the base
+        gsap.to(this.base.rotation, {
+            y: this.base.rotation.y + Math.PI * 2,
+            duration: 15,
             ease: 'none',
             repeat: -1
         });
+    }
+
+    onReady(callback) {
+        this.onReadyCallback = callback;
+        if (this.isReady) callback();
     }
 
     onWindowResize() {

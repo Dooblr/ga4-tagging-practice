@@ -22,20 +22,8 @@ body {
     transition: opacity 1s ease-out;
 }
 
-.fade-in {
-    opacity: 0;
-    animation: fadeIn 2s ease-in forwards;
-}
-
-.fade-in-delay {
-    opacity: 0;
-    animation: fadeIn 2s ease-in forwards;
-    animation-delay: 1s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.fade-in, .fade-in-delay {
+    display: none;
 }
 
 .content-section {
@@ -60,6 +48,8 @@ body {
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 1s ease-out, transform 1s ease-out;
+    font-weight: bold;
+    letter-spacing: -1px;
 }
 
 .hero-text.visible {
@@ -71,6 +61,7 @@ body {
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 1s ease-out, transform 1s ease-out;
+    font-weight: 300;
 }
 
 .hero-subtext.visible {
