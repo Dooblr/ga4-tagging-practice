@@ -8,6 +8,9 @@ import $ from 'jquery';
 window.$ = $;
 window.jQuery = $;
 
+// Test mode flag
+const TEST_MODE = true;
+
 document.addEventListener('DOMContentLoaded', () => {
     const carScene = new CarScene();
     carScene.init();
@@ -18,28 +21,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Animation sequence
     const sequence = async () => {
-        // Show header text with transform
+        if (TEST_MODE) {
+            // Skip text animations and hide text container immediately
+            textContainer.style.display = 'none';
+            carScene.fadeIn();
+            return;
+        }
+
+        // Regular sequence
         heroText.classList.add('visible');
         
-        // Wait 1.5 seconds
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Show subheader with transform
         subText.classList.add('visible');
         
-        // Wait 2 seconds
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Fade out all text
         textContainer.style.opacity = '0';
         
-        // Wait for fade out
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Remove text container
         textContainer.style.display = 'none';
         
-        // Fade in 3D model
         carScene.fadeIn();
     };
 

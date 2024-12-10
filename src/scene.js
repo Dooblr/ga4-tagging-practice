@@ -23,7 +23,7 @@ export class CarScene {
         document.getElementById('car-container').appendChild(this.renderer.domElement);
 
         // Setup camera
-        this.camera.position.set(4, 3, 4);
+        this.camera.position.set(1, 2, 5);
         this.camera.lookAt(0, 0, 0);
 
         // Setup controls
@@ -100,11 +100,61 @@ export class CarScene {
             envMapIntensity: 1.5
         });
 
+        // Create glass material for windshield
+        const glassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x88ccff,
+            metalness: 0.1,
+            roughness: 0.1,
+            transparent: true,
+            opacity: 0.3,
+            transmission: 0.9,
+            thickness: 0.5,
+            envMapIntensity: 1.2,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1,
+            side: THREE.DoubleSide
+        });
+
         // Simple box for car body
         const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 1);
         const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
         carBody.position.y = 0.5;
         this.car.add(carBody);
+
+        // Create triangular windshield
+        const windshieldGeometry = new THREE.BufferGeometry();
+        
+        // Define vertices for triangular windshield (narrower and smaller)
+        const vertices = new Float32Array([
+            // Front triangle
+            0.3, 0, 0.4,     // bottom left
+            -0.3, 0, 0.4,    // bottom right
+            0, 0.5, 0.4,     // top center
+
+            // Back triangle
+            0.3, 0, -0.4,    // bottom left
+            -0.3, 0, -0.4,   // bottom right
+            0, 0.5, -0.4     // top center
+        ]);
+
+        // Define indices to create faces
+        const indices = new Uint16Array([
+            0, 1, 2,    // front face
+            3, 4, 5,    // back face
+            0, 3, 2,    // left side
+            2, 3, 5,    // top
+            1, 4, 2,    // right side
+            2, 4, 5     // top right
+        ]);
+
+        windshieldGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        windshieldGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        windshieldGeometry.computeVertexNormals();
+
+        const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
+        // Adjust position for smaller windshield
+        windshield.position.set(0.7, 0.5, 0);
+        this.car.add(windshield);
 
         // Wheels
         const wheelGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
@@ -132,7 +182,7 @@ export class CarScene {
 
         // Position the car on the base
         this.car.position.y = 0.1;
-        this.base.add(this.car); // Add car to base instead of scene for rotation
+        this.base.add(this.car);
     }
 
     fadeIn() {
@@ -171,7 +221,6 @@ export class CarScene {
 
     animate() {
         requestAnimationFrame(this.animate.bind(this));
-        this.controls.update();
         this.renderer.render(this.scene, this.camera);
     }
 } 
